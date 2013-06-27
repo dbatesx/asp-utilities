@@ -1,6 +1,9 @@
-<!-- #include file="Collections.asp" -->
 <%
-' Depends on Collections.asp
+'<!-- include file="Collection.asp" -->
+' Functions that Depends on Collection.asp are commented out.
+' May add support for C_ArraySet.cls.
+
+' DBHelper written by Darren Bates.
 
 Function NewDB(sConnection)
 	Set NewDB = (New DBHelper).Init(sConnection)
@@ -14,14 +17,15 @@ Class DBHelper
 	private dbConnectionString
 	private oConn 
 	
-	Public Sub Init(sConnectionString)
+	Public Function Init(sConnection)
 		If IsObject(sConnection) then ' assume it is an adodb.connection object
 			Set oConn = sConnection
 		Else ' if it is a string
-			dbConnectionString = sConnectionString
+			dbConnectionString = sConnection
 			OpenDBConnection
-		'Set Init = me
-	End Sub
+        End If
+		Set Init = me
+	End Function
 	
 	'Sub class_initialize()
 	'End Sub
@@ -34,7 +38,7 @@ Class DBHelper
 		ConnectionString = dbConnectionString
 	End Property
 
-	Private Sub OpenDBConnection()
+	Private Function OpenDBConnection()
 
 		Set oConn = Server.CreateObject("ADODB.Connection")
 		oConn.CursorLocation = adUseClient
@@ -108,7 +112,7 @@ Class DBHelper
 	End Function
 
 	' Returns the first value of the first field using GetRS
-	Function GetScalar( ByVal sSQL )
+	Public Function GetScalar( ByVal sSQL )
 		Dim rs: Set rs = GetRS( sSQL )
 		If rs.EOF then
 			GetScalar = null
@@ -119,7 +123,7 @@ Class DBHelper
 	End Function
 
 	' Returns the values in the first row as a fieldname/value dictionary
-	Function Get1stRecord( ByVal sTable, ByVal sField, ByVal sFilter )
+	Public Function Get1stRecord( ByVal sTable, ByVal sField, ByVal sFilter )
 		'Dim dict: Set dict = New Collection
 		Dim dict: Set dict = Server.CreateObject("Scripting.Dictionary")
 		Dim rs: Set rs = GetRS( sTable, sField, sFilter )
@@ -134,7 +138,7 @@ Class DBHelper
 	End Function
 
 	' Returns the values in the first row as a fieldname/value dictionary
-	Function GetRecord( ByVal sSQL )
+	Public Function GetRecord( ByVal sSQL )
 		'Dim dict: Set dict = New Collection
 		Dim dict: Set dict = Server.CreateObject("Scripting.Dictionary")
 		Dim rs: Set rs = GetRS( sSQL )
@@ -150,7 +154,8 @@ Class DBHelper
 
 	' Returns a dictionary with the first field as a key and the second field as the value
 	Public Function GetRecordsDict( ByVal sTable, ByVal sFields, ByVal sFilter )
-		Dim d: Set d = New Collection
+		Dim d: Set d = Server.CreateObject("Scripting.Dictionary")
+		'Dim d: Set d = New Collection
 		Dim rs: Set rs = GetRS( sTable, sFields, sFilter )
 		Dim nFields: nFields = rs.Fields.Count
 		Dim b2nd: b2nd = (nFields > 1)
@@ -166,7 +171,8 @@ Class DBHelper
 				Case 2
 					call d.Add( sKeyValue, rs(1).value )
 				Case Else ' > 2
-					Dim dFields: set dFields = New Collection
+					Dim dFields: set dFields = Server.CreateObject("Scripting.Dictionary")
+					'Dim dFields: set dFields = New Collection
 					Dim f
 					For each f in rs.Fields
 						If not dfields.Exists( f.Name ) then
@@ -186,7 +192,8 @@ Class DBHelper
 	' Returns a dictionary with the first field as a key and the second field as the value
 	'	If there are more than 2 fields, the values will be a sub-dictionary of the fields
 	Public Function GetAllRecords( ByVal sSQL )
-		Dim d: Set d = New Collection
+		Dim d: Set d = Server.CreateObject("Scripting.Dictionary")
+		'Dim d: Set d = New Collection
 		Dim rs: Set rs = GetRS( sSQL )
 		Dim nFields: nFields = rs.Fields.Count
 		Dim b2nd: b2nd = (nFields > 1)
@@ -265,7 +272,8 @@ Class DBHelper
 	' Assumes cValues is a collection of field name keys and value items
 	'TODO: make more robust re: field types, etc.
 	Public Function InsertRecords( ByVal sTable, ByVal cValues )
-		If TypeName(cValues) <> "Collection" then exit Function
+		'If TypeName(cValues) <> "Collection" then exit Function
+		If TypeName(cValues) <> "Dictionary" then exit Function
 		
 		Dim sSQL 
 		sSQL _
@@ -342,11 +350,11 @@ Class DBHelper
 	Public Function FieldSet( ByRef rs )
 		dim fField, dField
 		
-		set FieldSet = New Collection
-		'set FieldSet = Server.CreateObject("Scripting.Dictionary")
+		'set FieldSet = New Collection
+		set FieldSet = Server.CreateObject("Scripting.Dictionary")
 		for each fField in rs.Fields
-			set dField = New Collection
-			'set dField = Server.CreateObject("Scripting.Dictionary")
+			'set dField = New Collection
+			set dField = Server.CreateObject("Scripting.Dictionary")
 			dField.Add "name", trim( fField.name )
 			dField.Add "type", fField.type
 			
@@ -377,6 +385,10 @@ Class DBHelper
 		End Select 
 	End Function
 
+    Public Function ColumnExists(ByVal sTableName, ByVal sColName)
+        ColumnExists = Not IsNull( GetScalar("Select COL_LENGTH('" & SQLFixUp(sTableName) & "', '" & SQLFixUp(sColName) & "')") )
+    End Function
+
 End Class 'DBHelper
 
 
@@ -388,6 +400,14 @@ Function SQLFixUp(ByVal sString)
 	End If
 		
 	SQLFixUp = Replace( sString, "'", "''" )
+End Function
+
+Function SQLValue(ByVal sValue)
+    If IsNull(sValue) then
+        SQLValue = "NULL"
+    Else
+        SQLValue = "'" & SQLFixUp(sValue) & "'"
+    End If
 End Function
 
 Function IsRS( ByRef rs )
@@ -404,7 +424,7 @@ End Function
 
 Function DisposeRS( ByRef rs )
 	If IsRS( rs ) then
-		If rs.State = adStateOpen then 
+		If rs.State = 1 then ' adStateOpen
 			rs.close
 		End If
 		set rs = nothing
