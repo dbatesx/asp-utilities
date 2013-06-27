@@ -1,0 +1,78 @@
+﻿
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title></title>
+</head>
+<body>
+<% 
+Dim Key
+'Update posted value
+Key = Request("SessKey")
+If Key > "" then
+    If Key = "AddNewSessionKey" then
+        %><p><%=Request("NewSessKey")%> = <%= Request("NewSessVar")%></p><%
+        Session(Request("NewSessKey")) = Request("NewSessVar")
+    Else
+        %><p><%=Key%> = <%= Request(Key)%></p><%
+        Session(Key) = Request(Key)
+    End If
+End If
+
+Key = Request("AppKey")
+If Key > "" then
+    If Key = "AddNewAppKey" then
+        %><p><%=Request("NewAppKey")%> = <%= Request("NewAppVar")%></p><%
+        Session(Request("NewAppKey")) = Request("NewAppVar")
+    Else
+        %><p><%=Key%> = <%= Request(Key)%></p><%
+        Application(Key) = Request(Key)
+    End If
+End If
+
+%>
+    <form id="form1" action="AppVars.asp" method="post" >
+    <div>
+    <h2>Session Variables:</h2>
+    <table>
+    <%
+    on error resume next
+    %><tr>
+        <td><input type='text' name="NewSessKey" /></td>
+        <td><textarea rows='1' cols='80' name='NewSessVar'></textarea></td>
+        <td><button name='SessKey' value='AddNewSessionKey'>Add</button></td></tr>
+    <%
+    for each key in Session.Contents
+    %><tr>
+        <td><%= key%></td>
+        <td><textarea rows='1' cols='80' name='<%= key%>'><%= Session(key)%></textarea></td>
+        <td><button name='SessKey' value='<%= key%>'>Update</button></td></tr>
+    <%
+    Next
+     %>
+    </table>
+    </div>
+    <div>
+    <h2>Application Variables:</h2>
+    <table>
+    <%
+    %><tr>
+        <td><input type='text' name="NewAppKey" /></td>
+        <td><textarea rows='1' cols='80' name='NewAppVar'></textarea></td>
+        <td><button name='AppKey' value='AddNewAppKey'>Add</button></td></tr>
+    <%
+    for each key in Application.Contents
+    %><tr>
+        <td><%= key%></td>
+        <td><textarea rows='1' cols='80' name='<%= key%>'><%= Application(key)%></textarea></td>
+        <td><button name='AppKey' value='<%= key%>'>Update</button></td></tr>
+    <%
+    Next
+     %>
+    </table>
+    </div>
+    </form>
+</body>
+</html>
